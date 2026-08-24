@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>外してるやん — フォローの変化を、ログインなしで。</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1c1c1e;
+    --muted: #6b7280;
+    --accent: #3b6cf6;
+    --border: #e5e7eb;
+    --card: #f8f9fb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #121214;
+      --fg: #f2f2f4;
+      --muted: #9aa0ab;
+      --accent: #7ea0ff;
+      --border: #2c2c30;
+      --card: #1c1c1f;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif;
+    line-height: 1.7;
+  }
+  .wrap {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0 20px;
+  }
+  header.hero {
+    padding: 72px 0 48px;
+    text-align: center;
+  }
+  .app-name {
+    font-size: 15px;
+    color: var(--accent);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+  }
+  h1 {
+    font-size: 34px;
+    margin: 12px 0 8px;
+    line-height: 1.4;
+  }
+  .tagline {
+    color: var(--muted);
+    font-size: 17px;
+    margin: 0 auto;
+    max-width: 480px;
+  }
+  .badges {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 28px;
+  }
+  .badge {
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 8px 16px;
+    font-size: 13px;
+    color: var(--fg);
+    background: var(--card);
+  }
+  section.features {
+    padding: 32px 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 520px) {
+    section.features { grid-template-columns: 1fr; }
+  }
+  .feature {
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    background: var(--card);
+  }
+  .feature .icon {
+    font-size: 22px;
+  }
+  .feature h3 {
+    font-size: 16px;
+    margin: 10px 0 6px;
+  }
+  .feature p {
+    font-size: 14px;
+    color: var(--muted);
+    margin: 0;
+  }
+  section.how {
+    padding: 40px 0;
+  }
+  section.how h2 {
+    font-size: 20px;
+    text-align: center;
+    margin-bottom: 24px;
+  }
+  ol.steps {
+    list-style: none;
+    counter-reset: step;
+    padding: 0;
+    margin: 0;
+  }
+  ol.steps li {
+    counter-increment: step;
+    display: flex;
+    gap: 16px;
+    padding: 16px 0;
+    border-top: 1px solid var(--border);
+  }
+  ol.steps li:first-child { border-top: none; }
+  ol.steps li::before {
+    content: counter(step);
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+  }
+  ol.steps h3 { margin: 0 0 2px; font-size: 15px; }
+  ol.steps p { margin: 0; color: var(--muted); font-size: 14px; }
+  section.cta {
+    text-align: center;
+    padding: 40px 0 56px;
+  }
+  .cta-box {
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--card);
+    padding: 28px 20px;
+  }
+  .cta-box p {
+    color: var(--muted);
+    font-size: 14px;
+    margin-top: 4px;
+  }
+  footer {
+    text-align: center;
+    padding: 24px 20px 48px;
+    color: var(--muted);
+    font-size: 13px;
+    border-top: 1px solid var(--border);
+  }
+  footer a { color: var(--muted); text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <div class="app-name">外してるやん</div>
+    <h1>フォローの変化を、<br>ログインなしで。</h1>
+    <p class="tagline">
+      スクリーンショットや画面録画を選ぶだけ。SNSへのログインもパスワード入力も
+      不要な、プライバシー重視のフォロー変化チェックアプリです。
+    </p>
+    <div class="badges">
+      <span class="badge">パスワード不要</span>
+      <span class="badge">SNS連携不要</span>
+      <span class="badge">端末内で解析</span>
+    </div>
+  </header>
+
+  <section class="features">
+    <div class="feature">
+      <div class="icon">🔒</div>
+      <h3>ログイン不要</h3>
+      <p>IDもパスワードも入力しません。第三者にSNSアカウント情報を渡す必要がありません。</p>
+    </div>
+    <div class="feature">
+      <div class="icon">📱</div>
+      <h3>端末内で完結</h3>
+      <p>画像・動画・解析結果は端末内で処理され、外部サーバーへ送信されることはありません。</p>
+    </div>
+    <div class="feature">
+      <div class="icon">✨</div>
+      <h3>シンプルな操作</h3>
+      <p>スクリーンショットか画面録画を選ぶだけ。説明書なしでも迷わず使えます。</p>
+    </div>
+    <div class="feature">
+      <div class="icon">🔍</div>
+      <h3>分かりやすい比較</h3>
+      <p>前回の記録との差分をひと目で確認。断定的な表現を避け、正確性を大切にしています。</p>
+    </div>
+  </section>
+
+  <section class="how">
+    <h2>使い方</h2>
+    <ol class="steps">
+      <li>
+        <div>
+          <h3>スクリーンショット・画面録画を選ぶ</h3>
+          <p>フォロワー一覧を撮影・録画したものをアプリに読み込みます。</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h3>端末内で自動解析</h3>
+          <p>ユーザー名を読み取り、記録として保存します。</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h3>前回との差分を確認</h3>
+          <p>2回目以降は、前回の記録との変化をすぐに確認できます。</p>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <section class="cta">
+    <div class="cta-box">
+      <strong>外してるやん</strong>
+      <p>App Storeにて近日公開予定です。</p>
+    </div>
+  </section>
+</div>
+<footer>
+  本アプリはInstagramまたはMeta Platforms, Inc.とは提携・承認・運営関係にありません。<br>
+  <a href="hazushiteruyan_privacy.html">利用規約・プライバシーポリシー</a> ・
+  <a href="hazushiteruyan_support.html">サポート</a> ・
+  <a href="hazushiteruyan_tokushoho.html">特定商取引法に基づく表記</a>
+</footer>
+</body>
+</html>
