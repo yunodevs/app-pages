@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="referrer" content="no-referrer">
+    <title>届く手紙</title>
+    <meta property="og:title" content="届く手紙">
+    <meta property="og:description" content="封をした手紙が届いています。ひらく日まで、大切に。">
+    <style>
+        :root {
+            --text: #2e2b28; --secondary: #8d877f; --tertiary: #c2bcb4; --divider: #efebe5;
+            --surface: #f7f4ef; --accent: #9a5248; --envelope: #f1e9dd; --shade: #e4d8c6;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0; min-height: 100vh; background: var(--surface); color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Segoe UI", Roboto, sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+        main { max-width: 440px; margin: 0 auto; padding: 48px 24px 40px; text-align: center; }
+        .caption { font-size: 12px; letter-spacing: .12em; color: var(--secondary); margin: 0 0 8px; }
+        h1 { font-family: "Hiragino Mincho ProN", "Yu Mincho", serif; font-weight: 600; font-size: 24px; margin: 0 0 32px; }
+        .envelope {
+            position: relative; width: 100%; aspect-ratio: 1 / .64; margin: 0 auto 28px;
+            background: var(--envelope); border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,.07);
+            overflow: hidden; transition: transform .6s ease, opacity .6s ease;
+        }
+        .envelope .pocket {
+            position: absolute; inset: 0;
+            background: linear-gradient(to top right, transparent calc(50% - 1px), var(--shade) 50%, transparent calc(50% + 1px)) left / 50% 100% no-repeat,
+                        linear-gradient(to top left, transparent calc(50% - 1px), var(--shade) 50%, transparent calc(50% + 1px)) right / 50% 100% no-repeat;
+            opacity: .9;
+        }
+        .envelope .flap {
+            position: absolute; left: 0; right: 0; top: 0; height: 56%;
+            background: linear-gradient(#f1e9dd, #eadfcf);
+            clip-path: polygon(0 0, 100% 0, 50% 100%);
+        }
+        .envelope .address {
+            position: absolute; left: 0; right: 0; bottom: 14%;
+            font-family: "Hiragino Mincho ProN", "Yu Mincho", serif; font-weight: 600; font-size: 19px; color: rgba(46,43,40,.85);
+        }
+        .envelope .from { position: absolute; left: 0; right: 0; bottom: 6%; font-size: 12px; color: var(--secondary); }
+        .seal {
+            position: absolute; left: 50%; top: 50%; width: 17%; aspect-ratio: 1; transform: translate(-50%, -50%);
+            border-radius: 50%; display: grid; place-items: center; color: rgba(255,255,255,.8); font-size: 22px;
+            box-shadow: 0 3px 6px rgba(0,0,0,.25), inset 0 0 0 5px rgba(255,255,255,.12);
+            transition: transform .4s ease, opacity .4s ease;
+        }
+        button.seal { border: 0; cursor: pointer; padding: 0; }
+        .seal.broken { transform: translate(-50%, -50%) scale(1.4) rotate(14deg); opacity: 0; }
+        .count { display: flex; justify-content: center; align-items: baseline; gap: 6px; margin: 0 0 6px; }
+        .count .num { font-family: "Hiragino Mincho ProN", "Times New Roman", serif; font-weight: 300; font-size: 56px; line-height: 1; }
+        .count .unit, .count .pre { color: var(--secondary); }
+        .when { color: var(--secondary); font-size: 14px; margin: 0 0 32px; }
+        .btn {
+            display: block; width: 100%; height: 54px; line-height: 54px; border-radius: 999px; border: 0;
+            background: var(--text); color: #fff; font-size: 15px; font-weight: 600; text-decoration: none; cursor: pointer;
+        }
+        .btn.accent { background: var(--accent); }
+        .note { font-size: 12px; color: var(--secondary); line-height: 1.8; margin: 14px 0 0; }
+        .small { font-size: 11px; color: var(--tertiary); line-height: 1.8; margin-top: 40px; }
+        .paper {
+            text-align: left; border-radius: 6px; padding: 32px 26px; margin: 0 0 28px;
+            box-shadow: 0 6px 20px rgba(0,0,0,.08); opacity: 0; transform: translateY(24px);
+            transition: opacity .8s ease, transform .8s ease;
+            font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+        }
+        .paper.show { opacity: 1; transform: none; }
+        .paper .to { font-weight: 600; font-size: 19px; margin: 0 0 18px; }
+        .paper .title { font-weight: 600; font-size: 17px; margin: 0 0 16px; }
+        .paper .body { font-size: 17px; line-height: 2.1; white-space: pre-wrap; word-break: break-word; margin: 0; }
+        .paper .ruled { background-image: linear-gradient(transparent calc(2.1em - 1px), var(--line) calc(2.1em - 1px)); background-size: 100% 2.1em; }
+        .paper .sign { text-align: right; margin-top: 28px; }
+        .paper .sign .date { font-size: 14px; }
+        .paper .sign .name { font-weight: 600; font-size: 16px; margin-top: 4px; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+<main id="app">
+    <p class="caption">届く手紙</p>
+    <h1 id="headline">手紙を読み込んでいます…</h1>
+</main>
+
+<!-- 手紙のデータの読み取り（DOM を使わない部分） -->
+<script id="core">
+const SEALS = { enji: "#9A3F3A", ai: "#3E5672", kincha: "#B3833F", fukamidori: "#3F6650", fuji: "#7D6A9C", sumi: "#3A3836" };
+const SYMBOLS = { me: "✦", partner: "♥", family: "⌂", friend: "★", other: "❦" };
+const PAPERS = {
+    plain:  { paper: "#FFFFFF", ink: "#2E2B28", line: "#E8E4DE", ruled: true },
+    kinari: { paper: "#F8F1E4", ink: "#2E2B28", line: "#E3D5BE", ruled: true },
+    sakura: { paper: "#FBEFEF", ink: "#2E2B28", line: "#F0D3D3", ruled: true },
+    sora:   { paper: "#EEF4F8", ink: "#2C3A47", line: "#CFDFEA", ruled: true },
+    grid:   { paper: "#FCFCFA", ink: "#2E2B28", line: "#DCE6DC", ruled: false, grid: true },
+    yozora: { paper: "#252B3B", ink: "#ECE8DF", line: "#3D4558", ruled: false },
+};
+
+function b64ToBytes(s) {
+    s = s.replace(/-/g, "+").replace(/_/g, "/");
+    while (s.length % 4) s += "=";
+    const bin = atob(s);
+    const out = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+}
+
+async function inflateRaw(bytes) {
+    const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+    return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+
+/** URL の「#v1.…」から封筒の情報を取り出す（本文は暗号化されたまま） */
+async function readPackage(hash) {
+    const token = (hash || "").replace(/^#/, "");
+    if (!token.startsWith("v1.")) throw new Error("no letter");
+    const json = new TextDecoder().decode(await inflateRaw(b64ToBytes(token.slice(3))));
+    const pkg = JSON.parse(json);
+    if (pkg.format !== "todoku-letter") throw new Error("not a letter");
+    return pkg;
+}
+
+/** ひらく日が来た手紙の本文を取り出す */
+async function openPackage(pkg) {
+    const keyBytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("todoku.letter.v1." + pkg.id));
+    const key = await crypto.subtle.importKey("raw", keyBytes, "AES-GCM", false, ["decrypt"]);
+    const all = b64ToBytes(pkg.payload);
+    const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv: all.slice(0, 12) }, key, all.slice(12));
+    return JSON.parse(new TextDecoder().decode(plain));
+}
+
+function addressLine(kind, name) {
+    const n = (name || "").trim();
+    if (n) return n + "へ";
+    return { me: "あなたへ", partner: "大切なあなたへ", family: "家族へ", friend: "友へ" }[kind] || "あなたへ";
+}
+
+function formatDay(d) {
+    return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日(${"日月火水木金土"[d.getDay()]})`;
+}
+function formatDayTime(d) {
+    return `${formatDay(d)} ${d.getHours()}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
+function remaining(openAt, now) {
+    const sec = (openAt - now) / 1000;
+    if (sec <= 0) return ["0", "分"];
+    const day = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate());
+    const days = Math.round((day(openAt) - day(now)) / 86400000);
+    if (days >= 2 || (days === 1 && sec >= 86400)) return [days.toLocaleString(), "日"];
+    if (sec >= 3600) return [String(Math.floor(sec / 3600)), "時間"];
+    return [String(Math.max(1, Math.ceil(sec / 60))), "分"];
+}
+
+if (typeof module !== "undefined") module.exports = { readPackage, openPackage, addressLine, remaining, formatDayTime };
+</script>
+
+<!-- 画面 -->
+<script>
+const app = document.getElementById("app");
+
+function el(tag, attrs = {}, ...children) {
+    const e = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) {
+        if (k === "class") e.className = v; else if (k === "style") e.style.cssText = v; else e.setAttribute(k, v);
+    }
+    for (const c of children) if (c != null) e.append(c);
+    return e;
+}
+
+function showError() {
+    app.replaceChildren(
+        el("p", { class: "caption" }, "届く手紙"),
+        el("h1", {}, "手紙を読み込めませんでした"),
+        el("p", { class: "note" }, "リンクが途中で切れていないか、送ってくれた方に確かめてください。")
+    );
+}
+
+function envelope(pkg, sealAsButton) {
+    const to = addressLine(pkg.recipientKind, pkg.recipientName);
+    const seal = el(sealAsButton ? "button" : "div",
+        { class: "seal", style: `background: radial-gradient(circle at 35% 30%, ${SEALS[pkg.seal] || SEALS.enji}ee, ${SEALS[pkg.seal] || SEALS.enji})`, "aria-label": "封蝋" },
+        SYMBOLS[pkg.recipientKind] || "✦");
+    const env = el("div", { class: "envelope" },
+        el("div", { class: "pocket" }), el("div", { class: "flap" }), seal,
+        el("div", { class: "address" }, to),
+        pkg.senderName ? el("div", { class: "from" }, pkg.senderName + "より") : null);
+    return { env, seal };
+}
+
+function appLink() {
+    return "todoku://receive" + location.hash;
+}
+
+function renderSealed(pkg, openAt) {
+    const sealedAt = new Date(pkg.sealedAt);
+    const { env } = envelope(pkg, false);
+    const num = el("span", { class: "num" });
+    const unit = el("span", { class: "unit" });
+    const tick = () => {
+        const now = new Date();
+        if (now >= openAt) { renderReady(pkg); return; }
+        const [v, u] = remaining(openAt, now);
+        num.textContent = v; unit.textContent = u;
+        setTimeout(tick, 30000);
+    };
+    app.replaceChildren(
+        el("p", { class: "caption" }, pkg.senderName ? `${pkg.senderName}さんから、封をした手紙が届いています` : "封をした手紙が届いています"),
+        el("h1", {}, addressLine(pkg.recipientKind, pkg.recipientName)),
+        env,
+        el("div", { class: "count" }, el("span", { class: "pre" }, "あと"), num, unit),
+        el("p", { class: "when" }, `${formatDayTime(openAt)} にひらけます`),
+        el("a", { class: "btn", href: appLink() }, "届く手紙アプリで受け取る"),
+        el("p", { class: "note" }, "アプリで受け取ると、ひらく日に通知が届きます。\nアプリがなくても、ひらく日にこのリンクをもう一度ひらけば読めます。"),
+        el("p", { class: "small" }, `${formatDay(sealedAt)}に封をされた手紙です。\nこのページは手紙をどこにも保存しません。手紙の中身は、このリンクの中にだけあります。`)
+    );
+    for (const p of app.querySelectorAll(".note, .small")) p.style.whiteSpace = "pre-line";
+    tick();
+}
+
+function renderReady(pkg) {
+    const { env, seal } = envelope(pkg, true);
+    const hint = el("p", { class: "when" }, "封蝋をタップしてひらく");
+    app.replaceChildren(
+        el("p", { class: "caption" }, pkg.senderName ? `${pkg.senderName}さんからの手紙が届きました` : "手紙が届きました"),
+        el("h1", {}, addressLine(pkg.recipientKind, pkg.recipientName)),
+        env, hint
+    );
+    seal.addEventListener("click", async () => {
+        seal.classList.add("broken");
+        try {
+            const letter = await openPackage(pkg);
+            setTimeout(() => renderLetter(pkg, letter), 500);
+        } catch (e) { showError(); }
+    }, { once: true });
+}
+
+function renderLetter(pkg, letter) {
+    const st = PAPERS[pkg.stationery] || PAPERS.plain;
+    const body = el("p", { class: "body" + (st.ruled ? " ruled" : "") }, letter.body || "");
+    const paper = el("div", { class: "paper", style: `background-color:${st.paper}; color:${st.ink}; --line:${st.line};` },
+        el("p", { class: "to" }, addressLine(pkg.recipientKind, pkg.recipientName)),
+        letter.title ? el("p", { class: "title" }, letter.title) : null,
+        body,
+        el("div", { class: "sign" },
+            el("div", { class: "date" }, formatDay(new Date(pkg.sealedAt))),
+            pkg.senderName ? el("div", { class: "name" }, pkg.senderName + "より") : null));
+    if (st.grid) {
+        paper.style.backgroundImage = `linear-gradient(${st.line} 1px, transparent 1px), linear-gradient(90deg, ${st.line} 1px, transparent 1px)`;
+        paper.style.backgroundSize = "18px 18px";
+    }
+    app.replaceChildren(
+        el("p", { class: "caption" }, "手紙が届きました"),
+        el("h1", {}, pkg.senderName ? `${pkg.senderName}さんから` : "あなたへ"),
+        paper,
+        el("a", { class: "btn accent", href: appLink() }, "届く手紙アプリにしまう"),
+        el("p", { class: "note" }, "アプリにしまうと、いつでも読み返せます。返事を書くこともできます。")
+    );
+    requestAnimationFrame(() => requestAnimationFrame(() => paper.classList.add("show")));
+}
+
+(async () => {
+    try {
+        const pkg = await readPackage(location.hash);
+        const openAt = new Date(pkg.openAt);
+        if (new Date() >= openAt) renderReady(pkg); else renderSealed(pkg, openAt);
+    } catch (e) {
+        showError();
+    }
+})();
+</script>
+</body>
+</html>
