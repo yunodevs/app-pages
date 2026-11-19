@@ -119,6 +119,7 @@ async function readPackage(hash) {
     const json = new TextDecoder().decode(await inflateRaw(b64ToBytes(token.slice(3))));
     const pkg = JSON.parse(json);
     if (pkg.format !== "todoku-letter") throw new Error("not a letter");
+    if (pkg.version > 2) throw new Error("newer version");
     return pkg;
 }
 
@@ -127,7 +128,8 @@ async function openPackage(pkg) {
     const keyBytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("todoku.letter.v1." + pkg.id));
     const key = await crypto.subtle.importKey("raw", keyBytes, "AES-GCM", false, ["decrypt"]);
     const all = b64ToBytes(pkg.payload);
-    const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv: all.slice(0, 12) }, key, all.slice(12));
+    let plain = new Uint8Array(await crypto.subtle.decrypt({ name: "AES-GCM", iv: all.slice(0, 12) }, key, all.slice(12)));
+    if (pkg.version >= 2) plain = await inflateRaw(plain);
     return JSON.parse(new TextDecoder().decode(plain));
 }
 
@@ -170,12 +172,22 @@ function el(tag, attrs = {}, ...children) {
     return e;
 }
 
-function showError() {
+const isApple = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const supported = typeof DecompressionStream !== "undefined" && window.crypto && crypto.subtle;
+
+function showError(message) {
     app.replaceChildren(
         el("p", { class: "caption" }, "届く手紙"),
         el("h1", {}, "手紙を読み込めませんでした"),
-        el("p", { class: "note" }, "リンクが途中で切れていないか、送ってくれた方に確かめてください。")
+        el("p", { class: "note" }, message || "リンクが途中で切れていないか、送ってくれた方に確かめてください。")
     );
+}
+
+/** アプリで受け取るボタン（iPhone・iPad のときだけ） */
+function appButton(label, note) {
+    if (!isApple) return [el("p", { class: "note" }, "届く手紙アプリはiPhone向けです。このページを残しておけば、ひらく日にもう一度読めます。")];
+    return [el("a", { class: "btn" + (label.includes("しまう") ? " accent" : ""), href: appLink() }, label),
+            el("p", { class: "note" }, note)];
 }
 
 function envelope(pkg, sealAsButton) {
@@ -212,8 +224,7 @@ function renderSealed(pkg, openAt) {
         env,
         el("div", { class: "count" }, el("span", { class: "pre" }, "あと"), num, unit),
         el("p", { class: "when" }, `${formatDayTime(openAt)} にひらけます`),
-        el("a", { class: "btn", href: appLink() }, "届く手紙アプリで受け取る"),
-        el("p", { class: "note" }, "アプリで受け取ると、ひらく日に通知が届きます。\nアプリがなくても、ひらく日にこのリンクをもう一度ひらけば読めます。"),
+        ...appButton("届く手紙アプリで受け取る", "アプリで受け取ると、ひらく日に通知が届きます。\nアプリがなくても、ひらく日にこのリンクをもう一度ひらけば読めます。"),
         el("p", { class: "small" }, `${formatDay(sealedAt)}に封をされた手紙です。\nこのページは手紙をどこにも保存しません。手紙の中身は、このリンクの中にだけあります。`)
     );
     for (const p of app.querySelectorAll(".note, .small")) p.style.whiteSpace = "pre-line";
@@ -255,8 +266,7 @@ function renderLetter(pkg, letter) {
         el("p", { class: "caption" }, "手紙が届きました"),
         el("h1", {}, pkg.senderName ? `${pkg.senderName}さんから` : "あなたへ"),
         paper,
-        el("a", { class: "btn accent", href: appLink() }, "届く手紙アプリにしまう"),
-        el("p", { class: "note" }, "アプリにしまうと、いつでも読み返せます。返事を書くこともできます。")
+        ...appButton("届く手紙アプリにしまう", "アプリにしまうと、いつでも読み返せます。返事を書くこともできます。")
     );
     requestAnimationFrame(() => requestAnimationFrame(() => paper.classList.add("show")));
 }
@@ -264,12 +274,16 @@ function renderLetter(pkg, letter) {
 window.addEventListener("hashchange", () => location.reload());
 
 (async () => {
+    if (!supported) {
+        showError("このブラウザでは手紙を読めません。iPhoneのSafari、またはChromeの新しいバージョンでひらいてください。");
+        return;
+    }
     try {
         const pkg = await readPackage(location.hash);
         const openAt = new Date(pkg.openAt);
         if (new Date() >= openAt) renderReady(pkg); else renderSealed(pkg, openAt);
     } catch (e) {
-        showError();
+        showError(e && e.message === "newer version" ? "新しいバージョンの届く手紙で書かれた手紙です。アプリを最新にしてから、もう一度ひらいてください。" : undefined);
     }
 })();
 </script>
