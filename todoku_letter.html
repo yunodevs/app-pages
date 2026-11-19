@@ -27,17 +27,7 @@
             background: var(--envelope); border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,.07);
             overflow: hidden; transition: transform .6s ease, opacity .6s ease;
         }
-        .envelope .pocket {
-            position: absolute; inset: 0;
-            background: linear-gradient(to top right, transparent calc(50% - 1px), var(--shade) 50%, transparent calc(50% + 1px)) left / 50% 100% no-repeat,
-                        linear-gradient(to top left, transparent calc(50% - 1px), var(--shade) 50%, transparent calc(50% + 1px)) right / 50% 100% no-repeat;
-            opacity: .9;
-        }
-        .envelope .flap {
-            position: absolute; left: 0; right: 0; top: 0; height: 56%;
-            background: linear-gradient(#f1e9dd, #eadfcf);
-            clip-path: polygon(0 0, 100% 0, 50% 100%);
-        }
+        .envelope svg.art { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
         .envelope .address {
             position: absolute; left: 0; right: 0; bottom: 14%;
             font-family: "Hiragino Mincho ProN", "Yu Mincho", serif; font-weight: 600; font-size: 19px; color: rgba(46,43,40,.85);
@@ -204,13 +194,30 @@ function appButton(label, note) {
     return [button, el("p", { class: "note" }, "届く手紙アプリを使っている方向け"), missing, el("p", { class: "note" }, note)];
 }
 
+/** 封筒の絵（アプリと同じ形：手前のポケットのV字と、上からかぶさるフタ） */
+function envelopeArt() {
+    const NS = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(NS, "svg");
+    svg.setAttribute("class", "art");
+    svg.setAttribute("viewBox", "0 0 100 64");
+    svg.setAttribute("preserveAspectRatio", "none");
+    svg.setAttribute("aria-hidden", "true");
+    svg.innerHTML = `
+        <defs><linearGradient id="flapFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#f1e9dd"/><stop offset="1" stop-color="#eadfcf"/>
+        </linearGradient></defs>
+        <polyline points="0,0 50,32 100,0" fill="none" stroke="#e4d8c6" stroke-width="0.4" vector-effect="non-scaling-stroke"/>
+        <path d="M0,0 L100,0 Q62,32.3 50,35.8 Q38,32.3 0,0 Z" fill="url(#flapFill)" stroke="#e4d8c6" stroke-width="1" vector-effect="non-scaling-stroke"/>`;
+    return svg;
+}
+
 function envelope(pkg, sealAsButton) {
     const to = addressLine(pkg.recipientKind, pkg.recipientName);
     const seal = el(sealAsButton ? "button" : "div",
         { class: "seal", style: `background: radial-gradient(circle at 35% 30%, ${SEALS[pkg.seal] || SEALS.enji}ee, ${SEALS[pkg.seal] || SEALS.enji})`, "aria-label": "封蝋" },
         SYMBOLS[pkg.recipientKind] || "✦");
     const env = el("div", { class: "envelope" },
-        el("div", { class: "pocket" }), el("div", { class: "flap" }), seal,
+        envelopeArt(), seal,
         el("div", { class: "address" }, to),
         pkg.senderName ? el("div", { class: "from" }, pkg.senderName + "より") : null);
     return { env, seal };
