@@ -104,14 +104,48 @@ async function inflateRaw(bytes) {
     return new Uint8Array(await new Response(stream).arrayBuffer());
 }
 
-/** URL の「#v1.…」から封筒の情報を取り出す（本文は暗号化されたまま） */
+// v3（短いリンク）の並び順。アプリ（LetterPackage.Compact）と同じにすること
+const COMPACT_KINDS = ["me", "partner", "family", "friend", "other"];
+const COMPACT_STATIONERIES = ["plain", "kinari", "sakura", "sora", "grid", "yozora"];
+const COMPACT_SEALS = ["enji", "ai", "kincha", "fukamidori", "fuji", "sumi"];
+
+function uuidString(bytes) {
+    const h = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("").toUpperCase();
+    return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+}
+
+/** v3：[版][ID16][封をした日時4][ひらく日時4][種類][便箋][封蝋][差出人][宛名][暗号] */
+function readCompact(bin) {
+    if (bin.length < 58) throw new Error("no letter");
+    if (bin[0] > 3) throw new Error("newer version");
+    if (bin[0] !== 3) throw new Error("no letter");
+    let i = 1;
+    const id = uuidString(bin.slice(i, i + 16)); i += 16;
+    const u32 = (at) => ((bin[at] << 24) >>> 0) + (bin[at + 1] << 16) + (bin[at + 2] << 8) + bin[at + 3];
+    const sealedAt = new Date(u32(i) * 1000).toISOString(); i += 4;
+    const openAt = new Date(u32(i) * 1000).toISOString(); i += 4;
+    const recipientKind = COMPACT_KINDS[bin[i++]] || "other";
+    const stationery = COMPACT_STATIONERIES[bin[i++]] || "plain";
+    const seal = COMPACT_SEALS[bin[i++]] || "enji";
+    const names = [];
+    for (let k = 0; k < 2; k++) {
+        const n = bin[i++];
+        if (n === undefined || i + n > bin.length) throw new Error("no letter");
+        names.push(new TextDecoder().decode(bin.slice(i, i + n))); i += n;
+    }
+    return { format: "todoku-letter", version: 3, id, sealedAt, openAt, recipientKind, stationery, seal,
+             senderName: names[0], recipientName: names[1], header: bin.slice(0, i), cipher: bin.slice(i) };
+}
+
+/** URL の「#v3.…」「#v1.…」から封筒の情報を取り出す（本文は暗号化されたまま） */
 async function readPackage(hash) {
     const token = (hash || "").replace(/^#/, "");
+    if (token.startsWith("v3.")) return readCompact(b64ToBytes(token.slice(3)));
     if (!token.startsWith("v1.")) throw new Error("no letter");
     const json = new TextDecoder().decode(await inflateRaw(b64ToBytes(token.slice(3))));
     const pkg = JSON.parse(json);
     if (pkg.format !== "todoku-letter") throw new Error("not a letter");
-    if (pkg.version > 2) throw new Error("newer version");
+    if (pkg.version > 2) throw new Error("newer version");   // v1 リンクの中の JSON は 1〜2
     return pkg;
 }
 
@@ -119,6 +153,16 @@ async function readPackage(hash) {
 async function openPackage(pkg) {
     const keyBytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("todoku.letter.v1." + pkg.id));
     const key = await crypto.subtle.importKey("raw", keyBytes, "AES-GCM", false, ["decrypt"]);
+    if (pkg.version === 3) {
+        const c = pkg.cipher;
+        const packed = await crypto.subtle.decrypt({ name: "AES-GCM", iv: c.slice(0, 12), additionalData: pkg.header }, key, c.slice(12));
+        const inner = await inflateRaw(new Uint8Array(packed));
+        const units = new Uint16Array(inner.length / 2);
+        for (let k = 0; k < units.length; k++) units[k] = inner[2 * k] | (inner[2 * k + 1] << 8);
+        const titleLen = Math.min(units[0], units.length - 1);
+        const text = (arr) => { let s = ""; for (let k = 0; k < arr.length; k += 4096) s += String.fromCharCode(...arr.subarray(k, k + 4096)); return s; };
+        return { title: text(units.subarray(1, 1 + titleLen)), body: text(units.subarray(1 + titleLen)) };
+    }
     const all = b64ToBytes(pkg.payload);
     let plain = new Uint8Array(await crypto.subtle.decrypt({ name: "AES-GCM", iv: all.slice(0, 12) }, key, all.slice(12)));
     if (pkg.version >= 2) plain = await inflateRaw(plain);
