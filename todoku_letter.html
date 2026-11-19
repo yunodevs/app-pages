@@ -183,11 +183,25 @@ function showError(message) {
     );
 }
 
-/** アプリで受け取るボタン（iPhone・iPad のときだけ） */
+/** App Store の配信ページ（公開後に「https://apps.apple.com/jp/app/id…」を入れる） */
+const APP_STORE_URL = "";
+
+/** アプリで受け取るボタン（iPhone・iPad のときだけ）。アプリがなくて開けなかったら案内を出す */
 function appButton(label, note) {
     if (!isApple) return [el("p", { class: "note" }, "届く手紙アプリはiPhone向けです。このページを残しておけば、ひらく日にもう一度読めます。")];
-    return [el("a", { class: "btn" + (label.includes("しまう") ? " accent" : ""), href: appLink() }, label),
-            el("p", { class: "note" }, note)];
+    const missing = el("div", { class: "note hidden", style: "background:#fff; border-radius:12px; padding:14px 16px; margin-top:14px; text-align:left;" },
+        el("strong", {}, "アプリが見つかりませんでした"), el("br"),
+        "アプリがなくても、このリンクは使えます。ひらく日にもう一度このリンクをひらけば、ここで手紙を読めます。",
+        el("br"),
+        APP_STORE_URL
+            ? el("a", { href: APP_STORE_URL, style: "color:#9a5248;" }, "App Storeで「届く手紙」を見る")
+            : "アプリを入れる場合は、App Storeで「届く手紙」と検索してください。インストール後、このリンクをもう一度ひらいて受け取れます。");
+    const button = el("a", { class: "btn" + (label.includes("しまう") ? " accent" : ""), href: appLink() }, label);
+    button.addEventListener("click", () => {
+        // アプリが開けばページは裏に回る。1.5秒たっても表に残っていれば、アプリが入っていない
+        setTimeout(() => { if (document.visibilityState === "visible") missing.classList.remove("hidden"); }, 1500);
+    });
+    return [button, el("p", { class: "note" }, "届く手紙アプリを使っている方向け"), missing, el("p", { class: "note" }, note)];
 }
 
 function envelope(pkg, sealAsButton) {
