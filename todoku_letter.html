@@ -261,6 +261,8 @@ function renderLetter(pkg, letter) {
     requestAnimationFrame(() => requestAnimationFrame(() => paper.classList.add("show")));
 }
 
+window.addEventListener("hashchange", () => location.reload());
+
 (async () => {
     try {
         const pkg = await readPackage(location.hash);
